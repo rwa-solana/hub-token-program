@@ -27,12 +27,12 @@ services:
       dockerfile: Dockerfile
     container_name: hub-token-indexer
     ports:
-      - "8080:8080"
+      - "9090:9090"
     environment:
       - SOLANA_RPC_URL=${SOLANA_RPC_URL:-https://api.devnet.solana.com}
       - SOLANA_PROGRAM_ID=${PROGRAM_ID:-FDfkSAAqk8uweJusJb8MSNRHXGRvFqokNfjw9m8ve6om}
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/hub_indexer?sslmode=disable
-      - PORT=8080
+      - PORT=9090
       - HOST=0.0.0.0
       - INDEXER_INTERVAL=60s
       - INDEXER_ENABLED=true
@@ -43,7 +43,7 @@ services:
     networks:
       - hub-token-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/health"]
       interval: 30s
       timeout: 10s
       retries: 3
