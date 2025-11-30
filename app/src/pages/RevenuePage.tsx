@@ -56,7 +56,7 @@ export const RevenuePage: FC = () => {
         </div>
         {totalClaimable > 0 && (
           <Button size="lg" leftIcon={<DollarSign className="w-5 h-5" />}>
-            Claim All (${totalClaimable.toFixed(2)})
+            Claim All ({totalClaimable.toFixed(4)} SOL)
           </Button>
         )}
       </div>
@@ -65,7 +65,7 @@ export const RevenuePage: FC = () => {
       <StatsGrid cols={3}>
         <StatCard
           title="Available to Claim"
-          value={`$${totalClaimable.toFixed(2)}`}
+          value={`${totalClaimable.toFixed(4)} SOL`}
           icon={<DollarSign className="w-6 h-6 text-solana-green-400" />}
           iconBg="bg-solana-green-500/20"
         />
@@ -104,7 +104,7 @@ export const RevenuePage: FC = () => {
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-solana-green-400">
-                    ${(Number(epoch.claimableAmount) / 1e9).toFixed(2)}
+                    {(Number(epoch.claimableAmount) / 1e9).toFixed(4)} SOL
                   </p>
                 </div>
                 <Button size="sm">Claim</Button>

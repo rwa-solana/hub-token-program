@@ -1,6 +1,6 @@
 import { FC, useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useWallet } from '@solana/wallet-adapter-react';
 import {
   Building2,
@@ -25,6 +25,7 @@ import { StatCard, StatsGrid } from '@/components/ui/Stats';
 import { PageLoading } from '@/components/ui/Loading';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PropertyGallery } from '@/components/property/PropertyGallery';
+import { InvestmentModal } from '@/components/investment';
 import { propertiesApi } from '@/services/api';
 import toast from 'react-hot-toast';
 
@@ -55,8 +56,10 @@ interface PropertyMetadata {
 export const PropertyDetailPage: FC = () => {
   const { mint } = useParams<{ mint: string }>();
   const { connected } = useWallet();
+  const queryClient = useQueryClient();
   const [metadata, setMetadata] = useState<PropertyMetadata | null>(null);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+  const [isInvestModalOpen, setIsInvestModalOpen] = useState(false);
 
   const { data: property, isLoading, error } = useQuery({
     queryKey: ['property', mint],
@@ -234,7 +237,12 @@ export const PropertyDetailPage: FC = () => {
           </Card>
 
           {connected ? (
-            <Button className="w-full" size="lg" leftIcon={<Wallet className="w-5 h-5" />}>
+            <Button
+              className="w-full"
+              size="lg"
+              leftIcon={<Wallet className="w-5 h-5" />}
+              onClick={() => setIsInvestModalOpen(true)}
+            >
               Invest Now
             </Button>
           ) : (
@@ -388,6 +396,21 @@ export const PropertyDetailPage: FC = () => {
           </div>
         </div>
       </Card>
+
+      {/* Investment Modal */}
+      <InvestmentModal
+        isOpen={isInvestModalOpen}
+        onClose={() => setIsInvestModalOpen(false)}
+        propertyMint={property.mint}
+        propertyName={property.name}
+        propertySymbol={property.symbol}
+        valuePerToken={property.details.valuePerToken}
+        availableSupply={Number(property.availableSupply)}
+        annualYieldPercent={property.details.annualYieldPercent}
+        onInvestmentSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['property', mint] });
+        }}
+      />
     </div>
   );
 };

@@ -2,13 +2,15 @@ import { FC, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Wallet, Building2, ArrowRight, Shield, Send } from 'lucide-react';
+import { Wallet, Building2, ArrowRight, Shield, Send, Coins } from 'lucide-react';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatCard, StatsGrid } from '@/components/ui/Stats';
 import { PageLoading } from '@/components/ui/Loading';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TransferModal } from '@/components/transfer';
+import { RevenueCard } from '@/components/revenue';
+import { useClaimableRevenue } from '@/hooks/useClaimableRevenue';
 import { investorApi } from '@/services/api';
 import { TokenHolding } from '@/types';
 
@@ -40,6 +42,8 @@ export const PortfolioPage: FC = () => {
     queryFn: () => investorApi.getPortfolio(publicKey!.toString()),
     enabled: !!publicKey,
   });
+
+  const { data: claimableRevenue } = useClaimableRevenue();
 
   if (!connected) {
     return (
@@ -114,6 +118,36 @@ export const PortfolioPage: FC = () => {
           iconBg="bg-blue-500/20"
         />
       </StatsGrid>
+
+      {/* Claimable Revenue */}
+      {claimableRevenue && claimableRevenue.epochs.length > 0 && (
+        <Card>
+          <CardHeader
+            title="Claimable Revenue"
+            subtitle="Your share of rental income distributions"
+            action={
+              <div className="flex items-center gap-2 text-sm text-solana-dark-400">
+                <Coins className="w-4 h-4" />
+                <span>{(parseInt(claimableRevenue.totalClaimable) / 1e9).toFixed(4)} SOL Available</span>
+              </div>
+            }
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {claimableRevenue.epochs.map((epoch) => (
+              <RevenueCard
+                key={`${epoch.propertyMint}-${epoch.epochNumber}`}
+                epochNumber={epoch.epochNumber}
+                propertyMint={epoch.propertyMint}
+                propertyName={epoch.propertyName}
+                totalRevenue={epoch.totalRevenue}
+                claimableAmount={epoch.claimableAmount}
+                depositedAt={epoch.depositedAt}
+              />
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Holdings */}
       <Card>

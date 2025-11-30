@@ -32,10 +32,10 @@ pub struct MintPropertyTokens<'info> {
     #[account(mut)]
     pub mint: Box<InterfaceAccount<'info, Mint>>,
 
-    /// Investor's token account
+    /// Investor's token account (created externally via createAssociatedTokenAccountIdempotent)
+    /// Must be the ATA for the investor and mint using Token-2022
     #[account(
-        init,
-        payer = authority,
+        mut,
         associated_token::mint = mint,
         associated_token::authority = investor,
         associated_token::token_program = token_program,

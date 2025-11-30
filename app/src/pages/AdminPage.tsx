@@ -56,9 +56,10 @@ interface Property {
   authority: string;
   totalSupply: string;
   circulatingSupply: string;
-  isActive: boolean;
+  status: string; // "active" | "paused"
   details: PropertyDetails;
-  createdAt: number;
+  createdAt: string;
+  currentEpoch?: number;
 }
 
 // Tab types
@@ -113,7 +114,16 @@ export const AdminPage: FC = () => {
     propertyMint: '',
     epochNumber: '',
     amountSol: '',
+    amountBrl: '',
   });
+
+  // SOL price oracle state
+  const [solPrice, setSolPrice] = useState<{ brl: number; usd: number; lastUpdated: Date | null }>({
+    brl: 0,
+    usd: 0,
+    lastUpdated: null,
+  });
+  const [isFetchingSolPrice, setIsFetchingSolPrice] = useState(false);
 
   // Auto-calculated values
   const calculations = useMemo(() => {
@@ -194,11 +204,52 @@ export const AdminPage: FC = () => {
     }
   }, [isAdmin]);
 
+  // Fetch SOL price when revenue tab is active
+  useEffect(() => {
+    if (activeTab === 'revenue') {
+      fetchSolPrice();
+    }
+  }, [activeTab]);
+
+  // Fetch SOL price from CoinGecko
+  const fetchSolPrice = async () => {
+    setIsFetchingSolPrice(true);
+    try {
+      const response = await fetch(
+        'https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=brl,usd'
+      );
+      const data = await response.json();
+      if (data.solana) {
+        setSolPrice({
+          brl: data.solana.brl,
+          usd: data.solana.usd,
+          lastUpdated: new Date(),
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching SOL price:', error);
+    } finally {
+      setIsFetchingSolPrice(false);
+    }
+  };
+
+  // Auto-calculate SOL amount when BRL changes
+  useEffect(() => {
+    if (revenueForm.amountBrl && solPrice.brl > 0) {
+      const brlAmount = parseFloat(revenueForm.amountBrl);
+      if (!isNaN(brlAmount)) {
+        const solAmount = brlAmount / solPrice.brl;
+        setRevenueForm(prev => ({ ...prev, amountSol: solAmount.toFixed(6) }));
+      }
+    }
+  }, [revenueForm.amountBrl, solPrice.brl]);
+
   const fetchProperties = async () => {
     try {
       const response = await fetch(`${ADMIN_API_URL}/api/v1/properties`);
       const data = await response.json();
-      setProperties(data.properties || []);
+      // API returns { success: true, data: [...], count: N }
+      setProperties(data.data || data.properties || []);
     } catch (error) {
       console.error('Error fetching properties:', error);
     }
@@ -403,12 +454,21 @@ export const AdminPage: FC = () => {
           message: `Revenue deposited! Vault: ${data.revenueVault}`,
           signature: data.signature,
         });
-        setRevenueForm({ propertyMint: '', epochNumber: '', amountSol: '' });
+        setRevenueForm({ propertyMint: '', epochNumber: '', amountSol: '', amountBrl: '' });
       } else {
-        setLastResult({ success: false, message: data.error || 'Failed to deposit revenue' });
+        // Check for epoch already exists error
+        let errorMessage = data.error || 'Failed to deposit revenue';
+        if (errorMessage.includes('already in use') || errorMessage.includes('0x0')) {
+          errorMessage = `Epoch #${revenueForm.epochNumber} já existe! Use a próxima epoch disponível.`;
+        }
+        setLastResult({ success: false, message: errorMessage });
       }
     } catch (error: any) {
-      setLastResult({ success: false, message: error.message || 'Network error' });
+      let errorMessage = error.message || 'Network error';
+      if (errorMessage.includes('already in use') || errorMessage.includes('0x0')) {
+        errorMessage = `Epoch #${revenueForm.epochNumber} já existe! Use a próxima epoch disponível.`;
+      }
+      setLastResult({ success: false, message: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
@@ -546,8 +606,8 @@ export const AdminPage: FC = () => {
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-lg font-semibold text-white">{property.name}</h3>
                       <Badge variant="default">{property.symbol}</Badge>
-                      <Badge variant={property.isActive ? 'success' : 'warning'}>
-                        {property.isActive ? 'Active' : 'Paused'}
+                      <Badge variant={property.status === 'active' ? 'success' : 'warning'}>
+                        {property.status === 'active' ? 'Active' : 'Paused'}
                       </Badge>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -589,7 +649,7 @@ export const AdminPage: FC = () => {
                       onClick={() => handleToggleStatus(property.mint)}
                       leftIcon={<Power className="w-4 h-4" />}
                     >
-                      {property.isActive ? 'Pause' : 'Activate'}
+                      {property.status === 'active' ? 'Pause' : 'Activate'}
                     </Button>
                     <Button
                       variant="ghost"
@@ -936,61 +996,257 @@ export const AdminPage: FC = () => {
 
       {/* Deposit Revenue Form */}
       {activeTab === 'revenue' && (
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-6">Deposit Revenue (Dividends)</h3>
-          <form onSubmit={handleDepositRevenue} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-solana-dark-300 mb-2">Property</label>
-              <select
-                className="w-full px-4 py-3 bg-solana-dark-800 border border-solana-dark-600 rounded-lg text-white focus:border-solana-purple-500 focus:outline-none"
-                value={revenueForm.propertyMint}
-                onChange={(e) => setRevenueForm({ ...revenueForm, propertyMint: e.target.value })}
-                required
-              >
-                <option value="">Select a property</option>
-                {properties.map((p) => (
-                  <option key={p.mint} value={p.mint}>
-                    {p.name} ({p.symbol})
-                  </option>
-                ))}
-              </select>
+        <div className="space-y-6">
+          {/* Info Card */}
+          <Card className="p-6 bg-gradient-to-r from-solana-purple-500/10 to-solana-green-500/10 border-solana-purple-500/30">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-solana-purple-500/20 rounded-xl">
+                <DollarSign className="w-6 h-6 text-solana-purple-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-2">Como funciona a distribuição de receitas?</h3>
+                <div className="text-sm text-solana-dark-300 space-y-2">
+                  <p><strong>1. Epoch:</strong> Cada depósito cria uma "época" de distribuição (ex: Epoch #1 = Janeiro, Epoch #2 = Fevereiro)</p>
+                  <p><strong>2. Snapshot:</strong> O sistema registra o supply circulante no momento do depósito</p>
+                  <p><strong>3. Proporcional:</strong> Cada investidor pode reivindicar sua parte: <code className="bg-solana-dark-800 px-1 rounded">(tokens_investidor / supply_total) × valor_depositado</code></p>
+                  <p><strong>4. Claim:</strong> Investidores acessam o portfólio e clicam em "Claim" para receber SOL</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-solana-dark-300 mb-2">Epoch Number</label>
-              <input
-                type="number"
-                className="w-full px-4 py-3 bg-solana-dark-800 border border-solana-dark-600 rounded-lg text-white focus:border-solana-purple-500 focus:outline-none"
-                placeholder="1"
-                value={revenueForm.epochNumber}
-                onChange={(e) => setRevenueForm({ ...revenueForm, epochNumber: e.target.value })}
-                required
-                min={1}
-              />
-              <p className="mt-1 text-xs text-solana-dark-400">
-                Sequential number for this distribution period (e.g., month 1, month 2, etc.)
-              </p>
+          </Card>
+
+          {/* Form */}
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold text-white mb-6">Depositar Receita (Dividendos)</h3>
+            <form onSubmit={handleDepositRevenue} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-solana-dark-300 mb-2">Propriedade</label>
+                <select
+                  className="w-full px-4 py-3 bg-solana-dark-800 border border-solana-dark-600 rounded-lg text-white focus:border-solana-purple-500 focus:outline-none"
+                  value={revenueForm.propertyMint}
+                  onChange={(e) => setRevenueForm({ ...revenueForm, propertyMint: e.target.value })}
+                  required
+                >
+                  <option value="">Selecione uma propriedade</option>
+                  {properties.map((p) => (
+                    <option key={p.mint} value={p.mint}>
+                      {p.name} ({p.symbol}) - {parseInt(p.circulatingSupply).toLocaleString()} tokens em circulação
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Selected Property Info */}
+              {revenueForm.propertyMint && (() => {
+                const selectedProperty = properties.find(p => p.mint === revenueForm.propertyMint);
+                if (!selectedProperty) return null;
+                const circulatingSupply = parseInt(selectedProperty.circulatingSupply);
+                const amountSol = parseFloat(revenueForm.amountSol) || 0;
+                const perToken = circulatingSupply > 0 ? amountSol / circulatingSupply : 0;
+
+                return (
+                  <div className="bg-solana-dark-800/50 border border-solana-dark-600 rounded-xl p-4">
+                    <h4 className="text-sm font-medium text-solana-dark-300 mb-3">Detalhes da Propriedade</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <p className="text-solana-dark-400">Supply Total</p>
+                        <p className="text-white font-medium">{parseInt(selectedProperty.totalSupply).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-solana-dark-400">Em Circulação</p>
+                        <p className="text-white font-medium">{circulatingSupply.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-solana-dark-400">Valor USD</p>
+                        <p className="text-white font-medium">${selectedProperty.details.totalValueUsd.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-solana-dark-400">Yield Anual</p>
+                        <p className="text-white font-medium">{selectedProperty.details.annualYieldPercent}%</p>
+                      </div>
+                    </div>
+                    {amountSol > 0 && circulatingSupply > 0 && (
+                      <div className="mt-4 pt-4 border-t border-solana-dark-600">
+                        <div className="flex items-center justify-between">
+                          <span className="text-solana-dark-400">Valor por token:</span>
+                          <span className="text-solana-green-400 font-bold">{perToken.toFixed(8)} SOL</span>
+                        </div>
+                        <p className="text-xs text-solana-dark-500 mt-1">
+                          Investidor com 10,000 tokens receberá: {(perToken * 10000).toFixed(4)} SOL
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              <div>
+                <label className="block text-sm font-medium text-solana-dark-300 mb-2 flex items-center">
+                  Número da Epoch
+                  <InfoTooltip text="Número sequencial do período de distribuição. Use 1 para a primeira distribuição, 2 para a segunda, etc. Cada epoch só pode ser usada uma vez." />
+                </label>
+                <input
+                  type="number"
+                  className="w-full px-4 py-3 bg-solana-dark-800 border border-solana-dark-600 rounded-lg text-white focus:border-solana-purple-500 focus:outline-none"
+                  placeholder="1"
+                  value={revenueForm.epochNumber}
+                  onChange={(e) => setRevenueForm({ ...revenueForm, epochNumber: e.target.value })}
+                  required
+                  min={1}
+                />
+                {revenueForm.propertyMint && (() => {
+                  const selectedProperty = properties.find(p => p.mint === revenueForm.propertyMint);
+                  const nextEpoch = (selectedProperty?.currentEpoch || 0) + 1;
+                  return (
+                    <div className="mt-2 flex items-center gap-2">
+                      <p className="text-xs text-solana-dark-400">
+                        💡 Próxima epoch sugerida: <span className="text-solana-purple-400 font-bold">#{nextEpoch}</span>
+                      </p>
+                      <button
+                        type="button"
+                        className="text-xs text-solana-purple-400 hover:text-solana-purple-300 underline"
+                        onClick={() => setRevenueForm({ ...revenueForm, epochNumber: nextEpoch.toString() })}
+                      >
+                        Usar #{nextEpoch}
+                      </button>
+                    </div>
+                  );
+                })()}
+                <p className="mt-1 text-xs text-yellow-400">
+                  ⚠️ Cada epoch só pode ser usada UMA vez! Se a transação falhar com "already in use", use o próximo número.
+                </p>
+              </div>
+
+              {/* SOL Price Oracle Card */}
+              <div className="bg-gradient-to-r from-solana-purple-500/10 to-solana-green-500/10 border border-solana-purple-500/30 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-gradient-solana flex items-center justify-center">
+                      <span className="text-white font-bold text-xs">◎</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">Cotação Solana</p>
+                      <p className="text-xs text-solana-dark-400">via CoinGecko</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={fetchSolPrice}
+                    disabled={isFetchingSolPrice}
+                    leftIcon={<RefreshCw className={`w-3 h-3 ${isFetchingSolPrice ? 'animate-spin' : ''}`} />}
+                  >
+                    Atualizar
+                  </Button>
+                </div>
+                {solPrice.brl > 0 ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-solana-dark-800/50 rounded-lg p-3">
+                      <p className="text-xs text-solana-dark-400">1 SOL =</p>
+                      <p className="text-xl font-bold text-solana-green-400">R$ {solPrice.brl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    </div>
+                    <div className="bg-solana-dark-800/50 rounded-lg p-3">
+                      <p className="text-xs text-solana-dark-400">1 SOL =</p>
+                      <p className="text-xl font-bold text-white">$ {solPrice.usd.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-3 text-solana-dark-400">
+                    {isFetchingSolPrice ? 'Buscando cotação...' : 'Clique em Atualizar para buscar cotação'}
+                  </div>
+                )}
+                {solPrice.lastUpdated && (
+                  <p className="text-xs text-solana-dark-500 mt-2 text-center">
+                    Última atualização: {solPrice.lastUpdated.toLocaleTimeString('pt-BR')}
+                  </p>
+                )}
+              </div>
+
+              {/* BRL to SOL Calculator */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-solana-dark-300 mb-2 flex items-center">
+                    💰 Valor do Aluguel (R$)
+                    <InfoTooltip text="Digite o valor do aluguel recebido em Reais. O sistema calculará automaticamente o equivalente em SOL baseado na cotação atual." />
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="w-full px-4 py-3 bg-solana-dark-800 border border-solana-dark-600 rounded-lg text-white focus:border-solana-purple-500 focus:outline-none"
+                    placeholder="2000.00"
+                    value={revenueForm.amountBrl}
+                    onChange={(e) => setRevenueForm({ ...revenueForm, amountBrl: e.target.value })}
+                    min={0}
+                  />
+                  <p className="mt-1 text-xs text-solana-dark-400">
+                    Valor original do aluguel em Reais
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-solana-dark-300 mb-2 flex items-center">
+                    ◎ Valor em SOL
+                    <InfoTooltip text="Quantidade de SOL a ser distribuída. Este valor é calculado automaticamente quando você preenche o valor em BRL, ou pode ser editado manualmente." />
+                  </label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    className={`w-full px-4 py-3 border border-solana-dark-600 rounded-lg text-white focus:border-solana-purple-500 focus:outline-none ${
+                      revenueForm.amountBrl && solPrice.brl > 0
+                        ? 'bg-solana-dark-700'
+                        : 'bg-solana-dark-800'
+                    }`}
+                    placeholder="0.1"
+                    value={revenueForm.amountSol}
+                    onChange={(e) => setRevenueForm({ ...revenueForm, amountSol: e.target.value, amountBrl: '' })}
+                    required
+                    min={0.000001}
+                  />
+                  {revenueForm.amountBrl && solPrice.brl > 0 && (
+                    <p className="mt-1 text-xs text-solana-green-400">
+                      ⚡ Calculado: R$ {parseFloat(revenueForm.amountBrl).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ÷ R$ {solPrice.brl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  )}
+                  <p className="mt-1 text-xs text-solana-dark-400">
+                    ⚠️ Este valor será transferido da carteira admin para o cofre
+                  </p>
+                </div>
+              </div>
+
+              <Button type="submit" className="w-full" isLoading={isSubmitting} variant="success">
+                {isSubmitting ? 'Depositando...' : `Depositar ${revenueForm.amountSol || '0'} SOL`}
+              </Button>
+            </form>
+          </Card>
+
+          {/* Recent Deposits Info */}
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Exemplo de Fluxo</h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center gap-3 p-3 bg-solana-dark-800/50 rounded-lg">
+                <div className="w-8 h-8 rounded-full bg-solana-purple-500/20 flex items-center justify-center text-solana-purple-400 font-bold">1</div>
+                <div>
+                  <p className="text-white">Admin deposita 0.1 SOL na Epoch #1</p>
+                  <p className="text-solana-dark-400">Supply circulante: 250,000 tokens</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-solana-dark-800/50 rounded-lg">
+                <div className="w-8 h-8 rounded-full bg-solana-green-500/20 flex items-center justify-center text-solana-green-400 font-bold">2</div>
+                <div>
+                  <p className="text-white">Investidor com 125,000 tokens (50%)</p>
+                  <p className="text-solana-dark-400">Pode reivindicar: 0.05 SOL</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-solana-dark-800/50 rounded-lg">
+                <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold">3</div>
+                <div>
+                  <p className="text-white">Investidor acessa Portfólio e clica "Claim"</p>
+                  <p className="text-solana-dark-400">SOL é transferido para a carteira do investidor</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-solana-dark-300 mb-2">Amount (SOL)</label>
-              <input
-                type="number"
-                step="0.001"
-                className="w-full px-4 py-3 bg-solana-dark-800 border border-solana-dark-600 rounded-lg text-white focus:border-solana-purple-500 focus:outline-none"
-                placeholder="50"
-                value={revenueForm.amountSol}
-                onChange={(e) => setRevenueForm({ ...revenueForm, amountSol: e.target.value })}
-                required
-                min={0}
-              />
-              <p className="mt-1 text-xs text-solana-dark-400">
-                This amount will be distributed proportionally to all token holders
-              </p>
-            </div>
-            <Button type="submit" className="w-full" isLoading={isSubmitting}>
-              {isSubmitting ? 'Depositing...' : 'Deposit Revenue'}
-            </Button>
-          </form>
-        </Card>
+          </Card>
+        </div>
       )}
     </div>
   );
