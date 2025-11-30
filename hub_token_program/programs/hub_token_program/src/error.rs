@@ -50,4 +50,39 @@ pub enum RwaError {
 
     #[msg("Insufficient token balance for burn operation")]
     InsufficientBalance,
+
+    // Revenue Vault Errors
+    #[msg("Invalid amount: must be greater than zero")]
+    InvalidAmount,
+
+    #[msg("No token holders: cannot distribute revenue")]
+    NoTokenHolders,
+
+    #[msg("Math overflow in calculation")]
+    MathOverflow,
+
+    #[msg("Claim amount too small")]
+    ClaimTooSmall,
+
+    #[msg("Insufficient vault balance")]
+    InsufficientVaultBalance,
+
+    #[msg("Invalid epoch for this property")]
+    InvalidEpoch,
+
+    #[msg("Epoch not finalized: cannot claim yet")]
+    EpochNotFinalized,
+
+    // Hub Credential Protocol Errors
+    #[msg("Hub Credential expired: please renew your credential")]
+    CredentialExpired,
+
+    #[msg("Hub Credential revoked: verification required")]
+    CredentialRevoked,
+
+    #[msg("Invalid Hub Credential: credential not valid")]
+    InvalidCredential,
+
+    #[msg("Credential suspended: contact support")]
+    CredentialSuspended,
 }

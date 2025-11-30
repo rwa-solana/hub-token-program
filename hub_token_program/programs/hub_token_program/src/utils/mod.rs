@@ -1,3 +1,3 @@
-pub mod sas_verification;
+pub mod hub_credential_verification;
 
-pub use sas_verification::*;
+pub use hub_credential_verification::*;

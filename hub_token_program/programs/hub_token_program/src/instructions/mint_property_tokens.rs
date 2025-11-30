@@ -1,4 +1,4 @@
-/// Mint property tokens to investors (requires KYC via SAS)
+/// Mint property tokens to investors (requires KYC via Hub Credential)
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
@@ -14,8 +14,8 @@ pub struct MintPropertyTokens<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
 
-    /// Investor receiving tokens (must have valid SAS attestation)
-    /// CHECK: Verified via SAS attestation
+    /// Investor receiving tokens (must have valid Hub Credential)
+    /// CHECK: Verified via Hub Credential
     pub investor: UncheckedAccount<'info>,
 
     /// PropertyState PDA
@@ -32,20 +32,20 @@ pub struct MintPropertyTokens<'info> {
     #[account(mut)]
     pub mint: Box<InterfaceAccount<'info, Mint>>,
 
-    /// Investor's token account
+    /// Investor's token account (created externally via createAssociatedTokenAccountIdempotent)
+    /// Must be the ATA for the investor and mint using Token-2022
     #[account(
-        init,
-        payer = authority,
+        mut,
         associated_token::mint = mint,
         associated_token::authority = investor,
         associated_token::token_program = token_program,
     )]
     pub investor_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    /// SAS Attestation account for investor KYC
-    /// CHECK: Will be verified using SAS program
-    /// This account must be owned by SAS_PROGRAM_ID and contain valid KYC attestation
-    pub investor_attestation: UncheckedAccount<'info>,
+    /// Hub Credential account for investor KYC
+    /// CHECK: Will be verified using Hub Credential program
+    /// This account must be owned by HUB_CREDENTIAL_PROGRAM_ID and contain valid KYC credential
+    pub investor_credential: UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token2022>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -65,15 +65,15 @@ pub fn handler(ctx: Context<MintPropertyTokens>, amount: u64) -> Result<()> {
         RwaError::ExceedsMaxSupply
     );
 
-    // 3. Verify SAS attestation for KYC compliance
-    verify_sas_attestation(
-        &ctx.accounts.investor_attestation.to_account_info(),
+    // 3. Verify Hub Credential for KYC compliance
+    verify_hub_credential(
+        &ctx.accounts.investor_credential.to_account_info(),
         &ctx.accounts.investor.key(),
         &ctx.accounts.mint.key(),
     )?;
 
     msg!(
-        "SAS verification passed for investor: {}",
+        "Hub Credential verification passed for investor: {}",
         ctx.accounts.investor.key()
     );
 

@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-solana-dark-950 text-white antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-solana-dark-900;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-solana-dark-600 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-solana-dark-500;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
+           rounded-lg font-medium text-sm transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-solana-dark-950
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-solana text-white shadow-lg shadow-solana-purple-500/25
+           hover:shadow-xl hover:shadow-solana-purple-500/30 hover:scale-[1.02]
+           focus:ring-solana-purple-500;
+  }
+
+  .btn-secondary {
+    @apply bg-solana-dark-800 text-white border border-solana-dark-600
+           hover:bg-solana-dark-700 hover:border-solana-dark-500
+           focus:ring-solana-dark-500;
+  }
+
+  .btn-ghost {
+    @apply text-solana-dark-300 hover:text-white hover:bg-solana-dark-800
+           focus:ring-solana-dark-500;
+  }
+
+  .btn-success {
+    @apply bg-solana-green-500 text-solana-dark-950
+           hover:bg-solana-green-400 focus:ring-solana-green-500;
+  }
+
+  .card {
+    @apply bg-solana-dark-900/50 backdrop-blur-xl border border-solana-dark-800
+           rounded-2xl overflow-hidden;
+  }
+
+  .card-hover {
+    @apply card hover:border-solana-dark-700 hover:bg-solana-dark-900/70
+           transition-all duration-300 cursor-pointer;
+  }
+
+  .glass {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl;
+  }
+
+  .input {
+    @apply w-full px-4 py-3 bg-solana-dark-800/50 border border-solana-dark-700
+           rounded-xl text-white placeholder-solana-dark-400
+           focus:outline-none focus:border-solana-purple-500 focus:ring-1 focus:ring-solana-purple-500
+           transition-all duration-200;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-solana-dark-300 mb-2;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-solana bg-clip-text text-transparent;
+  }
+
+  .gradient-border {
+    @apply relative before:absolute before:inset-0 before:rounded-2xl before:p-[1px]
+           before:bg-gradient-solana before:-z-10;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-in {
+    animation: animateIn 0.5s ease-out forwards;
+  }
+
+  @keyframes animateIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

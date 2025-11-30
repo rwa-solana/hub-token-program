@@ -1,0 +1,120 @@
+services:
+  # PostgreSQL Database for Indexer
+  postgres:
+    image: postgres:15-alpine
+    container_name: hub-token-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=hub_indexer
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - hub-token-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Indexer Service
+  indexer:
+    build:
+      context: ./services/indexer
+      dockerfile: Dockerfile
+    container_name: hub-token-indexer
+    ports:
+      - "9090:9090"
+    environment:
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL:-https://api.devnet.solana.com}
+      - SOLANA_PROGRAM_ID=${PROGRAM_ID:-FDfkSAAqk8uweJusJb8MSNRHXGRvFqokNfjw9m8ve6om}
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/hub_indexer?sslmode=disable
+      - PORT=9090
+      - HOST=0.0.0.0
+      - INDEXER_INTERVAL=60s
+      - INDEXER_ENABLED=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - hub-token-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # Production API service
+  api:
+    build:
+      context: ./services/api
+      dockerfile: Dockerfile
+    container_name: hub-token-api
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - HOST=0.0.0.0
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL:-https://api.devnet.solana.com}
+      - SOLANA_WS_URL=${SOLANA_WS_URL:-wss://api.devnet.solana.com}
+      - SOLANA_NETWORK=${SOLANA_NETWORK:-devnet}
+      - PROGRAM_ID=${PROGRAM_ID:-Fmqd2M8VMepCQAAXJJ3mUS7sEL9FaFUkX7t5Zrt9Xu2Z}
+      - SOLANA_COMMITMENT=${SOLANA_COMMITMENT:-confirmed}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      - SAS_PROGRAM_ID=${SAS_PROGRAM_ID:-SASxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx}
+      - KYC_PROVIDER=${KYC_PROVIDER:-civic}
+      - ATTESTATION_EXPIRY_DAYS=${ATTESTATION_EXPIRY_DAYS:-365}
+    volumes:
+      - ./target/idl:/app/idl:ro
+    restart: unless-stopped
+    networks:
+      - hub-token-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3002/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Development API service with hot reload
+  api-dev:
+    build:
+      context: ./services/api
+      dockerfile: Dockerfile.dev
+    container_name: hub-token-api-dev
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      - HOST=0.0.0.0
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL:-http://host.docker.internal:8899}
+      - SOLANA_WS_URL=${SOLANA_WS_URL:-ws://host.docker.internal:8900}
+      - SOLANA_NETWORK=${SOLANA_NETWORK:-localnet}
+      - PROGRAM_ID=${PROGRAM_ID:-Fmqd2M8VMepCQAAXJJ3mUS7sEL9FaFUkX7t5Zrt9Xu2Z}
+      - SOLANA_COMMITMENT=${SOLANA_COMMITMENT:-confirmed}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      - SAS_PROGRAM_ID=${SAS_PROGRAM_ID:-SASxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx}
+      - KYC_PROVIDER=${KYC_PROVIDER:-civic}
+      - ATTESTATION_EXPIRY_DAYS=${ATTESTATION_EXPIRY_DAYS:-365}
+    volumes:
+      - ./services/api/src:/app/src:ro
+      - ./target/idl:/app/idl:ro
+    restart: unless-stopped
+    networks:
+      - hub-token-network
+    profiles:
+      - dev
+
+networks:
+  hub-token-network:
+    driver: bridge
+
+volumes:
+  postgres-data:

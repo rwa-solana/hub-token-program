@@ -1,8 +1,6 @@
 /// Program constants and seeds for PDA derivation
 use anchor_lang::prelude::*;
 
-declare_id!("Comp4ssDzXcLeu2MnLuGNNFC4cmLPMng8qWHSVerteR");
-
 /// Seed for PropertyState PDA derivation
 pub const PROPERTY_STATE_SEED: &[u8] = b"property";
 
@@ -24,12 +22,15 @@ pub const MAX_PROPERTY_TYPE_LEN: usize = 100;
 /// Maximum length for metadata URI (IPFS/Arweave)
 pub const MAX_METADATA_URI_LEN: usize = 500;
 
-/// Solana Attestation Service Program ID
-/// TODO: Update with actual SAS program ID once deployed
-pub const SAS_PROGRAM_ID: Pubkey = ID;
+/// Hub Credential Program ID
+/// Custom KYC/Verifiable Credentials protocol for Hub Token
+pub const HUB_CREDENTIAL_PROGRAM_ID: Pubkey = pubkey!("FaJ4XGCLeu7eZiMjBEkANko3TRhpjns3cv6R1vZK94Wt");
 
 /// Minimum rental yield in basis points (0.01% = 1 bps)
 pub const MIN_RENTAL_YIELD_BPS: u16 = 0;
 
 /// Maximum rental yield in basis points (100% = 10000 bps)
 pub const MAX_RENTAL_YIELD_BPS: u16 = 10000;
+
+/// KYC grace period in seconds (7 days) for expiring credentials
+pub const KYC_GRACE_PERIOD_SECONDS: i64 = 7 * 24 * 60 * 60;

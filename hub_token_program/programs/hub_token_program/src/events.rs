@@ -46,18 +46,28 @@ pub struct PropertyStatusChanged {
     pub timestamp: i64,
 }
 
+/// Event emitted when Hub Credential verification succeeds
 #[event]
-pub struct SasVerificationSuccess {
-    pub investor: Pubkey,
-    pub property: Pubkey,
-    pub attestation: Pubkey,
+pub struct HubCredentialVerified {
+    pub wallet: Pubkey,
+    pub credential: Pubkey,
+    pub credential_type: u8,
     pub timestamp: i64,
 }
 
 #[event]
-pub struct SasVerificationFailed {
-    pub investor: Pubkey,
-    pub property: Pubkey,
-    pub reason: String,
+pub struct TransferKycVerified {
+    pub mint: Pubkey,
+    pub source: Pubkey,
+    pub destination: Pubkey,
+    pub destination_owner: Pubkey,
+    pub amount: u64,
+    pub timestamp: i64,
+}
+
+#[event]
+pub struct ExtraAccountMetasInitialized {
+    pub mint: Pubkey,
+    pub extra_account_meta_list: Pubkey,
     pub timestamp: i64,
 }

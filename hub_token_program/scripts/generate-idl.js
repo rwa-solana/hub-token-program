@@ -10,7 +10,7 @@ function calculateDiscriminator(namespace, name) {
 
 // IDL completo baseado no código fonte
 const idl = {
-  "address": "CA7Z9VgsUuDWZreqaUfJztBgEgi6ksW9iyW9pjvMarKU",
+  "address": "Fmqd2M8VMepCQAAXJJ3mUS7sEL9FaFUkX7t5Zrt9Xu2Z",
   "metadata": {
     "name": "hub_token_program",
     "version": "0.1.0",
@@ -18,19 +18,20 @@ const idl = {
   },
   "instructions": [
     {
-      "name": "initializeProperty",
-      "discriminator": calculateDiscriminator('global', 'initialize_property'),
+      "name": "createPropertyMint",
+      "discriminator": calculateDiscriminator('global', 'create_property_mint'),
       "accounts": [
         { "name": "authority", "writable": true, "signer": true },
-        { "name": "mint", "writable": true },
+        { "name": "mint", "writable": true, "signer": true },
         { "name": "propertyState", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [112, 114, 111, 112, 101, 114, 116, 121] }, { "kind": "account", "path": "mint" }] } },
+        { "name": "extraAccountMetaList", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [101, 120, 116, 114, 97, 45, 97, 99, 99, 111, 117, 110, 116, 45, 109, 101, 116, 97, 115] }, { "kind": "account", "path": "mint" }] } },
         { "name": "tokenProgram", "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb" },
         { "name": "systemProgram", "address": "11111111111111111111111111111111" }
       ],
       "args": [
-        { "name": "decimals", "type": "u8" },
         { "name": "propertyName", "type": "string" },
         { "name": "propertySymbol", "type": "string" },
+        { "name": "decimals", "type": "u8" },
         { "name": "totalSupply", "type": "u64" },
         { "name": "propertyDetails", "type": { "defined": { "name": "PropertyDetails" } } }
       ]
@@ -88,12 +89,77 @@ const idl = {
         { "name": "mint" }
       ],
       "args": []
+    },
+    {
+      "name": "initializeExtraAccountMetas",
+      "discriminator": calculateDiscriminator('global', 'initialize_extra_account_metas'),
+      "accounts": [
+        { "name": "payer", "writable": true, "signer": true },
+        { "name": "extraAccountMetaList", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [101, 120, 116, 114, 97, 45, 97, 99, 99, 111, 117, 110, 116, 45, 109, 101, 116, 97, 115] }, { "kind": "account", "path": "mint" }] } },
+        { "name": "mint" },
+        { "name": "systemProgram", "address": "11111111111111111111111111111111" }
+      ],
+      "args": []
+    },
+    {
+      "name": "transferHookExecute",
+      "discriminator": calculateDiscriminator('global', 'transfer_hook_execute'),
+      "accounts": [
+        { "name": "sourceAccount" },
+        { "name": "mint" },
+        { "name": "destinationAccount" },
+        { "name": "owner" },
+        { "name": "extraAccountMetaList", "pda": { "seeds": [{ "kind": "const", "value": [101, 120, 116, 114, 97, 45, 97, 99, 99, 111, 117, 110, 116, 45, 109, 101, 116, 97, 115] }, { "kind": "account", "path": "mint" }] } },
+        { "name": "destinationAttestation" }
+      ],
+      "args": [
+        { "name": "amount", "type": "u64" }
+      ]
+    },
+    {
+      "name": "depositRevenue",
+      "discriminator": calculateDiscriminator('global', 'deposit_revenue'),
+      "accounts": [
+        { "name": "authority", "writable": true, "signer": true },
+        { "name": "propertyState" },
+        { "name": "mint" },
+        { "name": "revenueEpoch", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [114, 101, 118, 101, 110, 117, 101, 95, 101, 112, 111, 99, 104] }, { "kind": "account", "path": "propertyState" }, { "kind": "arg", "path": "epochNumber" }] } },
+        { "name": "revenueVault", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [114, 101, 118, 101, 110, 117, 101, 95, 118, 97, 117, 108, 116] }, { "kind": "account", "path": "revenueEpoch" }] } },
+        { "name": "systemProgram", "address": "11111111111111111111111111111111" }
+      ],
+      "args": [
+        { "name": "epochNumber", "type": "u64" },
+        { "name": "amount", "type": "u64" }
+      ]
+    },
+    {
+      "name": "claimRevenue",
+      "discriminator": calculateDiscriminator('global', 'claim_revenue'),
+      "accounts": [
+        { "name": "investor", "writable": true, "signer": true },
+        { "name": "propertyState" },
+        { "name": "mint" },
+        { "name": "investorTokenAccount" },
+        { "name": "revenueEpoch" },
+        { "name": "claimRecord", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [99, 108, 97, 105, 109, 95, 114, 101, 99, 111, 114, 100] }, { "kind": "account", "path": "revenueEpoch" }, { "kind": "account", "path": "investor" }] } },
+        { "name": "revenueVault", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [114, 101, 118, 101, 110, 117, 101, 95, 118, 97, 117, 108, 116] }, { "kind": "account", "path": "revenueEpoch" }] } },
+        { "name": "systemProgram", "address": "11111111111111111111111111111111" }
+      ],
+      "args": []
     }
   ],
   "accounts": [
     {
       "name": "PropertyState",
       "discriminator": calculateDiscriminator('account', 'PropertyState')
+    },
+    {
+      "name": "RevenueEpoch",
+      "discriminator": calculateDiscriminator('account', 'RevenueEpoch')
+    },
+    {
+      "name": "ClaimRecord",
+      "discriminator": calculateDiscriminator('account', 'ClaimRecord')
     }
   ],
   "types": [
@@ -128,6 +194,35 @@ const idl = {
           { "name": "metadataUri", "type": "string" }
         ]
       }
+    },
+    {
+      "name": "RevenueEpoch",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "propertyState", "type": "pubkey" },
+          { "name": "epochNumber", "type": "u64" },
+          { "name": "totalRevenue", "type": "u64" },
+          { "name": "eligibleSupply", "type": "u64" },
+          { "name": "depositedAt", "type": "i64" },
+          { "name": "depositedBy", "type": "pubkey" },
+          { "name": "isFinalized", "type": "bool" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "ClaimRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "epoch", "type": "pubkey" },
+          { "name": "investor", "type": "pubkey" },
+          { "name": "amountClaimed", "type": "u64" },
+          { "name": "claimedAt", "type": "i64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
     }
   ],
   "errors": [
@@ -146,7 +241,14 @@ const idl = {
     { "code": 6012, "name": "PropertyAddressTooLong", "msg": "Property address too long" },
     { "code": 6013, "name": "PropertyTypeTooLong", "msg": "Property type too long" },
     { "code": 6014, "name": "MetadataUriTooLong", "msg": "Metadata URI too long" },
-    { "code": 6015, "name": "InsufficientBalance", "msg": "Insufficient token balance for burn operation" }
+    { "code": 6015, "name": "InsufficientBalance", "msg": "Insufficient token balance for burn operation" },
+    { "code": 6016, "name": "InvalidAmount", "msg": "Invalid amount: must be greater than zero" },
+    { "code": 6017, "name": "NoTokenHolders", "msg": "No token holders: cannot distribute revenue" },
+    { "code": 6018, "name": "MathOverflow", "msg": "Math overflow in calculation" },
+    { "code": 6019, "name": "ClaimTooSmall", "msg": "Claim amount too small" },
+    { "code": 6020, "name": "InsufficientVaultBalance", "msg": "Insufficient vault balance" },
+    { "code": 6021, "name": "InvalidEpoch", "msg": "Invalid epoch for this property" },
+    { "code": 6022, "name": "EpochNotFinalized", "msg": "Epoch not finalized: cannot claim yet" }
   ],
 };
 

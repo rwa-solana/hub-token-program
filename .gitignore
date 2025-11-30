@@ -1,9 +1,40 @@
-.anchor
+# Dependencies
+node_modules/
+
+# Build artifacts
+target/
+.anchor/
+test-ledger/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
 .DS_Store
-target
-**/*.rs.bk
-node_modules
-test-ledger
-.yarn
-.claude
-services
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Claude
+.claude/
+
+# Keys (NEVER commit these)
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!Anchor.toml
+!hub_token_program/**/Cargo.toml
+!hub_token_program/**/Cargo.lock
+!hub_token_program/target/idl/*.json
+!hub_token_program/target/types/*.ts
