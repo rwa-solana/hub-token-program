@@ -5,6 +5,7 @@ node_modules/
 target/
 .anchor/
 test-ledger/
+**/*.rs.bk
 
 # Environment files
 .env
@@ -27,6 +28,9 @@ npm-debug.log*
 
 # Claude
 .claude/
+
+# Yarn
+.yarn
 
 # Keys (NEVER commit these)
 *.json

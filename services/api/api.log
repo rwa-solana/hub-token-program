@@ -1,0 +1,49 @@
+yarn run v1.22.22
+warning package.json: No license field
+$ node dist/main.js
+[IDL] Loaded from: /Users/renancorrea/solana/hub-token/hub_token_program/target/idl/hub_token_program.json
+
+
+  ╔══════════════════════════════════════════════════╗
+  ║                                                  ║
+  ║   🏠  Hub Token API Server                       ║
+  ║   Real Estate Tokenization Platform              ║
+  ║                                                  ║
+  ╠══════════════════════════════════════════════════╣
+  ║   🌐 Server:  http://0.0.0.0:3003               
+  ║   🔗 Network: devnet                          
+  ║   📡 RPC:     https://solana-devnet.g.alchem  
+  ║                                                  ║
+  ║   Endpoints:                                     ║
+  ║   • GET  /api/v1/properties                      ║
+  ║   • GET  /api/v1/properties/:mint                ║
+  ║   • GET  /api/v1/kyc/verify/:wallet              ║
+  ║   • POST /api/v1/kyc/attestation                 ║
+  ║   • GET  /api/v1/investors/:wallet/portfolio     ║
+  ║   • GET  /api/v1/investors/:wallet/claimable     ║
+  ║   • GET  /api/v1/revenue/property/:mint          ║
+  ║                                                  ║
+  ╚══════════════════════════════════════════════════╝
+
+
+[32mGET[0m /api/v1/properties - 200 - 1666ms
+[32mGET[0m /api/v1/properties? - 200 - 539ms
+[36mGET[0m /api/v1/properties? - 304 - 599ms
+[36mGET[0m /api/v1/properties? - 304 - 664ms
+[36mGET[0m /api/v1/properties? - 304 - 884ms
+[36mGET[0m /api/v1/properties? - 304 - 654ms
+[32mGET[0m /api/v1/investors/7XxWTXMiZzEaG54aXQtfsoA78F6CDScpYAjuMHBUbKQ7/portfolio - 200 - 801ms
+[32mGET[0m /api/v1/investors/7XxWTXMiZzEaG54aXQtfsoA78F6CDScpYAjuMHBUbKQ7/claimable - 200 - 479ms
+[36mGET[0m /api/v1/properties? - 304 - 545ms
+[36mGET[0m /api/v1/properties? - 304 - 555ms
+[36mGET[0m /api/v1/properties? - 304 - 609ms
+[36mGET[0m /api/v1/investors/7XxWTXMiZzEaG54aXQtfsoA78F6CDScpYAjuMHBUbKQ7/claimable - 304 - 1841ms
+[36mGET[0m /api/v1/investors/7XxWTXMiZzEaG54aXQtfsoA78F6CDScpYAjuMHBUbKQ7/portfolio - 304 - 2179ms
+[36mGET[0m /api/v1/properties? - 304 - 804ms
+[36mGET[0m /api/v1/properties? - 304 - 883ms
+[36mGET[0m /api/v1/properties? - 304 - 943ms
+[36mGET[0m /api/v1/properties? - 304 - 1177ms
+[36mGET[0m /api/v1/properties? - 304 - 1232ms
+[33mGET[0m /api/v1/ipfs/status - 404 - 37ms
+error Command failed with signal "SIGKILL".
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
